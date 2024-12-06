@@ -37,13 +37,12 @@
       margin-bottom: 5px;
     }
 
-    textarea {
+    input[type="text"] {
       width: 100%;
       padding: 10px;
       font-size: 16px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      resize: vertical;
     }
 
     button {
@@ -53,7 +52,6 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-right: 10px;
     }
 
     button:hover {
@@ -74,10 +72,10 @@
   <div class="container">
     <h1>Left Recursion Eliminator</h1>
     <div class="form-group">
-      <label for="grammarInput">Enter Grammar Rules (one per line):</label>
-      <textarea id="grammarInput" rows="5" placeholder="Enter multiple productions"></textarea>
+      <label for="grammarInput">Enter Grammar Rule (e.g., E → E + T | T):</label>
+      <input type="text" id="grammarInput" placeholder="Enter production and click Add">
     </div>
-    <button onclick="addRule()">Add Rules</button>
+    <button onclick="addRule()">Add Rule</button>
     <button onclick="eliminateLeftRecursion()">Eliminate Left Recursion</button>
 
     <div class="form-group">
@@ -91,6 +89,77 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    // Store grammar rules
+    let grammar = {};
+
+    // Function to add a rule to the grammar
+    function addRule() {
+      const input = document.getElementById("grammarInput").value.trim();
+      const lines = input.split("\n"); // Split by newlines for multiple rules
+      const originalDiv = document.getElementById("originalGrammar");
+
+      if (input === "") {
+        alert("Please enter a grammar rule!");
+        return;
+      }
+
+      try {
+        lines.forEach(line => {
+          const [nonTerminal, productions] = line.split("→").map(item => item.trim());
+          const productionList = productions.split("|").map(prod => prod.trim());
+
+          if (!grammar[nonTerminal]) {
+            grammar[nonTerminal] = [];
+          }
+          grammar[nonTerminal].push(...productionList); // Append productions
+        });
+
+        // Update display
+        originalDiv.textContent = formatGrammar(grammar);
+        document.getElementById("grammarInput").value = "";
+      } catch (error) {
+        alert("Invalid input format! Use 'Non-Terminal → production1 | production2'");
+      }
+    }
+
+    // Function to eliminate left recursion
+    function eliminateLeftRecursion() {
+      const transformedDiv = document.getElementById("transformedGrammar");
+      const newGrammar = {};
+
+      for (let nonTerminal in grammar) {
+        const productions = grammar[nonTerminal];
+        const directRecursion = [];
+        const nonRecursive = [];
+
+        productions.forEach(production => {
+          if (production.startsWith(nonTerminal)) {
+            directRecursion.push(production.slice(nonTerminal.length).trim()); // Handle remainder
+          } else {
+            nonRecursive.push(production.trim());
+          }
+        });
+
+        if (directRecursion.length > 0) {
+          const newNonTerminal = nonTerminal + "'";
+          newGrammar[nonTerminal] = nonRecursive.map(prod => prod + " " + newNonTerminal);
+          newGrammar[newNonTerminal] = directRecursion.map(prod => prod + " " + newNonTerminal).concat(["ε"]);
+        } else {
+          newGrammar[nonTerminal] = productions;
+        }
+      }
+
+      // Update display
+      transformedDiv.textContent = formatGrammar(newGrammar);
+    }
+
+    // Helper function to format grammar for display
+    function formatGrammar(grammar) {
+      return Object.entries(grammar)
+        .map(([nonTerminal, productions]) => `${nonTerminal} → ${productions.join(" | ")}`)
+        .join("\n");
+    }
+  </script>
 </body>
 </html>
